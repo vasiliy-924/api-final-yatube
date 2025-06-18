@@ -14,11 +14,12 @@ from api.serializers import (
     FollowSerializer
 )
 from api.permissions import IsAuthorOrReadOnly
-from posts.models import Group, Post, Follow
+from posts.models import Group, Post
 
 
 class CommentViewSet(viewsets.ModelViewSet):
     """Представление для модели Comment."""
+
     serializer_class = CommentSerializer
     permission_classes = (IsAuthorOrReadOnly,)
 
@@ -55,13 +56,14 @@ class CommentViewSet(viewsets.ModelViewSet):
 
 class GroupViewSet(viewsets.ReadOnlyModelViewSet):
     """Представление для модели Group."""
+
     queryset = Group.objects.all()
     serializer_class = GroupSerializer
-    permission_classes = (IsAuthorOrReadOnly,)
 
 
 class PostViewSet(viewsets.ModelViewSet):
     """Представление для модели Post."""
+
     queryset = Post.objects.all()
     serializer_class = PostSerializer
     pagination_class = LimitOffsetPagination
@@ -76,55 +78,46 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
-class FollowViewSet(viewsets.ModelViewSet):
+class FollowViewSet(viewsets.ViewSet):
     """Представление для модели Follow."""
-    queryset = Follow.objects.none()
+
     serializer_class = FollowSerializer
     permission_classes = (IsAuthenticated,)
     filter_backends = (filters.SearchFilter,)
     search_fields = ('following__username',)
-    http_method_names = ['get', 'post']
 
-    def get_queryset(self) -> Any:
+    def list(self, request: Request) -> Response:
         """
-        Получает список подписок текущего пользователя.
+        Возвращает список подписок текущего пользователя.
+
+        Args:
+            request: Запрос
+
         Returns:
-            QuerySet: Набор подписок
+            Response: Список подписок
         """
-        return Follow.objects.filter(user=self.request.user)
+        queryset = request.user.follower.all()
+        if request.query_params.get('search'):
+            queryset = queryset.filter(
+                following__username__icontains=request.query_params['search']
+            )
+        serializer = self.serializer_class(queryset, many=True)
+        return Response(serializer.data)
 
-    def perform_create(self, serializer: FollowSerializer) -> None:
+    def create(self, request: Request) -> Response:
         """
         Создает новую подписку.
-        Args:
-            serializer: Сериализатор подписки
-        """
-        serializer.save(user=self.request.user)
 
-    def retrieve(self, request: Request, *args: Any, **kwargs: Any):
-        """
-        Переопределяет метод retrieve для возврата 404 для объектов подписки.
         Args:
-            request: Объект запроса
-        Returns:
-            Response: Ответ с кодом 404
-        """
-        return Response(status=status.HTTP_404_NOT_FOUND)
+            request: Запрос
 
-    def create(self, request: Request, *args: Any, **kwargs: Any) -> Response:
-        """
-        Создает новую подписку.
-        Args:
-            request: Объект запроса
         Returns:
-            Response: Данные созданной подписки
+            Response: Созданная подписка
         """
-        serializer = self.get_serializer(data=request.data)
-        serializer.is_valid(raise_exception=True)
-        self.perform_create(serializer)
-        headers = self.get_success_headers(serializer.data)
-        return Response(
-            serializer.data,
-            status=status.HTTP_201_CREATED,
-            headers=headers
+        serializer = self.serializer_class(
+            data=request.data,
+            context={'request': request}
         )
+        serializer.is_valid(raise_exception=True)
+        serializer.save(user=request.user)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)

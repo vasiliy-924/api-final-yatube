@@ -1,4 +1,4 @@
-from typing import Any, Dict
+from typing import Any
 
 from django.contrib.auth import get_user_model
 from rest_framework import serializers
@@ -60,21 +60,12 @@ class FollowSerializer(serializers.ModelSerializer):
         model = Follow
         fields = ('user', 'following')
 
-    def validate(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Проверяет данные подписки.
-
-        Args:
-            data: Данные для проверки
-
-        Returns:
-            Dict[str, Any]: Проверенные данные
-
-        Raises:
-            serializers.ValidationError: Если проверка не пройдена
+    def validate_following(self, value: Any) -> Any:
+        """Проверяет, что пользователь не подписывается сам на себя,
+        и что подписка не дублируется.
         """
         user = self.context['request'].user
-        following = data['following']
+        following = value
 
         if user == following:
             raise serializers.ValidationError(
@@ -89,32 +80,4 @@ class FollowSerializer(serializers.ModelSerializer):
                 'Вы уже подписаны на этого пользователя'
             )
 
-        return data
-
-    def to_internal_value(self, data: Dict[str, Any]) -> Dict[str, Any]:
-        """
-        Удаляет поле user из данных запроса.
-
-        Args:
-            data: Данные для обработки
-
-        Returns:
-            Dict[str, Any]: Обработанные данные
-        """
-        if isinstance(data, dict) and 'user' in data:
-            data = data.copy()
-            data.pop('user')
-        return super().to_internal_value(data)
-
-    def create(self, validated_data: Dict[str, Any]) -> Follow:
-        """
-        Создает новый экземпляр подписки.
-
-        Args:
-            validated_data: Проверенные данные
-
-        Returns:
-            Follow: Созданный экземпляр подписки
-        """
-        validated_data['user'] = self.context['request'].user
-        return super().create(validated_data)
+        return value

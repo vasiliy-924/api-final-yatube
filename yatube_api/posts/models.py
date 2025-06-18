@@ -73,7 +73,7 @@ class Post(models.Model):
     class Meta:
         verbose_name = 'Пост'
         verbose_name_plural = 'Посты'
-        ordering = ['-pub_date']
+        ordering = ('-pub_date',)
 
     def __str__(self) -> str:
         """
@@ -112,7 +112,7 @@ class Comment(models.Model):
     class Meta:
         verbose_name = 'Комментарий'
         verbose_name_plural = 'Комментарии'
-        ordering = ['-created']
+        ordering = ('-created',)
 
     def __str__(self) -> str:
         """
@@ -147,9 +147,13 @@ class Follow(models.Model):
             models.UniqueConstraint(
                 fields=['user', 'following'],
                 name='unique_follow'
-            )
+            ),
+            models.CheckConstraint(
+                name="%(app_label)s_%(class)s_prevent_self_follow",
+                check=~models.Q(user=models.F("following")),
+            ),
         ]
-        ordering = ['user__username']
+        ordering = ('user__username',)
 
     def __str__(self) -> str:
         """

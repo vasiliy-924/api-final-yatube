@@ -6,6 +6,7 @@ class IsAuthorOrReadOnly(permissions.BasePermission):
     Только авторы объекта могут редактировать его.
     Разрешения на чтение разрешены для любого запроса.
     """
+
     def has_permission(self, request, view) -> bool:
         """
         Проверяет, имеет ли запрос разрешение на доступ к представлению.
