@@ -5,11 +5,21 @@
 ## Описание
 Проект **Yatube** — это простая социальная сеть для публикации текстовых постов, комментариев и подписок на авторов. Пользователи могут создавать публикации, комментировать их, подписываться на других авторов и просматривать контент в различных сообществах.
 
+## Технологический стек
+- Python 3.7+
+- Django 3.2
+- Django REST Framework 3.12
+- Djoser (JWT аутентификация)
+- PostgreSQL
+- Gunicorn
+- Nginx
+- Docker
+
 ## Установка
 1. Клонируйте репозиторий:
    ```bash
-   git clone https://github.com/yourusername/yatube-api.git
-   cd yatube-api
+   git clone git@github.com:vasiliy-924/api-final-yatube.git
+   cd api-final-yatube
    ```
 2. Cоздайте виртуальное окружение и активируйте его:
    ```bash
@@ -30,25 +40,41 @@
    python manage.py runserver
    ```
 
+## Тестирование API
+Для тестирования API вы можете использовать:
+1. Postman-коллекцию из директории `postman_collection/`
+2. curl-запросы (примеры ниже)
+3. Встроенный интерфейс DRF по адресу `http://localhost:8000/api/v1/`
+
 ## Примеры запросов
 ### Получение списка постов с пагинацией
 ```bash
-curl -X GET "http://localhost:8000/api/v1/posts/?limit=5&offset=10"      -H "Authorization: Bearer <your_access_token>"
+curl -X GET "http://localhost:8000/api/v1/posts/?limit=5&offset=10" \
+     -H "Authorization: Bearer <your_access_token>"
 ```
 
 ### Создание нового поста
 ```bash
-curl -X POST "http://localhost:8000/api/v1/posts/"      -H "Authorization: Bearer <your_access_token>"      -H "Content-Type: application/json"      -d '{ "text": "Hello, Yatube!", "group": 1 }'
+curl -X POST "http://localhost:8000/api/v1/posts/" \
+     -H "Authorization: Bearer <your_access_token>" \
+     -H "Content-Type: application/json" \
+     -d '{ "text": "Hello, Yatube!", "group": 1 }'
 ```
 
 ### Добавление комментария к публикации
 ```bash
-curl -X POST "http://localhost:8000/api/v1/posts/5/comments/"      -H "Authorization: Bearer <your_access_token>"      -H "Content-Type: application/json"      -d '{ "text": "Great post!" }'
+curl -X POST "http://localhost:8000/api/v1/posts/5/comments/" \
+     -H "Authorization: Bearer <your_access_token>" \
+     -H "Content-Type: application/json" \
+     -d '{ "text": "Great post!" }'
 ```
 
 ### Подписка на автора
 ```bash
-curl -X POST "http://localhost:8000/api/v1/follow/"      -H "Authorization: Bearer <your_access_token>"      -H "Content-Type: application/json"      -d '{ "following": "author_username" }'
+curl -X POST "http://localhost:8000/api/v1/follow/" \
+     -H "Authorization: Bearer <your_access_token>" \
+     -H "Content-Type: application/json" \
+     -d '{ "following": "author_username" }'
 ```
 
 ---
@@ -58,7 +84,7 @@ curl -X POST "http://localhost:8000/api/v1/follow/"      -H "Authorization: Bear
 ### Публикации (Posts)
 
 - **GET /api/v1/posts/**  
-  Получить список публикаций с поддержкой `limit` и `offset`.  
+  Получить список публикаций с поддержкой пагинации (`limit` и `offset`).  
   Ответ:
   ```json
   {
@@ -86,38 +112,56 @@ curl -X POST "http://localhost:8000/api/v1/follow/"      -H "Authorization: Bear
 
 - **GET /api/v1/posts/{post_id}/comments/**  
   Получить комментарии публикации.  
-  Ответ: массив объектов Comment или `404`.
+  Ответ: `200 OK` - массив объектов Comment или `404 Not Found`.
 
 - **POST /api/v1/posts/{post_id}/comments/**  
   Добавить комментарий. Только авторизованные.  
-  Body: `{ "text": "..." }`. Ответы: `201`, `400`, `401`, `404`.
+  Ответы: `201 Created`, `400 Bad Request`, `401 Unauthorized`, `404 Not Found`.
 
-- **GET/PUT/PATCH/DELETE /api/v1/posts/{post_id}/comments/{id}/**  
-  Операции над комментарием. PUT/PATCH/DELETE — только автор.
+- **GET /api/v1/posts/{post_id}/comments/{id}/**  
+  Получить комментарий.  
+  Ответы: `200 OK`, `404 Not Found`.
+
+- **PUT /api/v1/posts/{post_id}/comments/{id}/**  
+  Обновить комментарий. Только автор.  
+  Ответы: `200 OK`, `400 Bad Request`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`.
+
+- **PATCH /api/v1/posts/{post_id}/comments/{id}/**  
+  Частично обновить комментарий. Только автор.  
+  Ответы: `200 OK`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`.
+
+- **DELETE /api/v1/posts/{post_id}/comments/{id}/**  
+  Удалить комментарий. Только автор.  
+  Ответы: `204 No Content`, `401 Unauthorized`, `403 Forbidden`, `404 Not Found`.
 
 ### Сообщества (Groups)
 
 - **GET /api/v1/groups/**  
-  Список сообществ.
+  Список сообществ.  
+  Ответ: `200 OK` - массив объектов Group.
 
 - **GET /api/v1/groups/{id}/**  
-  Информация о сообществе по ID.
+  Информация о сообществе по ID.  
+  Ответы: `200 OK`, `404 Not Found`.
 
 ### Подписки (Follow)
 
 - **GET /api/v1/follow/**  
-  Список подписок текущего пользователя. `?search=<username>` для поиска по `following__username`.  
-  Ответ: массив объектов Follow.
+  Список подписок текущего пользователя.  
+  Поддерживает поиск по параметру `search`.  
+  Ответ: `200 OK` - массив объектов Follow или `401 Unauthorized`.
 
 - **POST /api/v1/follow/**  
   Подписаться на пользователя.  
   Body: `{ "following": "username" }`.  
-  Ответы: `201`, `400`, `401`.
+  Ответы: `201 Created`, `400 Bad Request`, `401 Unauthorized`.
 
 ### Аутентификация (JWT)
 
-- **POST /api/v1/jwt/create/** — получить `access` и `refresh`.  
-- **POST /api/v1/jwt/refresh/** — обновить `access`.  
+API использует JWT-аутентификацию через библиотеку djoser:
+
+- **POST /api/v1/jwt/create/** — получить `access` и `refresh` токены.  
+- **POST /api/v1/jwt/refresh/** — обновить `access` токен.  
 - **POST /api/v1/jwt/verify/** — проверить токен.
 
 ---
@@ -131,4 +175,9 @@ curl -X POST "http://localhost:8000/api/v1/follow/"      -H "Authorization: Bear
 - **TokenObtainPair**: `username`, `password`.  
 - **Token**: `refresh`, `access`.  
 - **TokenRefresh**: `refresh`.  
-- **TokenVerify**: `token`.  
+- **TokenVerify**: `token`.
+
+---
+
+## Автор
+**Василий Петров** - [GitHub https://github.com/vasiliy-924](https://github.com/vasiliy-924)
