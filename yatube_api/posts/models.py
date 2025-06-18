@@ -143,16 +143,16 @@ class Follow(models.Model):
     class Meta:
         verbose_name = 'Подписка'
         verbose_name_plural = 'Подписки'
-        constraints = [
+        constraints = (
             models.UniqueConstraint(
-                fields=['user', 'following'],
+                fields=('user', 'following'),
                 name='unique_follow'
             ),
             models.CheckConstraint(
-                name="%(app_label)s_%(class)s_prevent_self_follow",
-                check=~models.Q(user=models.F("following")),
+                name='%(app_label)s_%(class)s_prevent_self_follow',
+                check=~models.Q(user=models.F('following')),
             ),
-        ]
+        )
         ordering = ('user__username',)
 
     def __str__(self) -> str:

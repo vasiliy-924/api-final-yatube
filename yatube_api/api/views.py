@@ -1,11 +1,10 @@
 from typing import Any
 
 from django.shortcuts import get_object_or_404
-from rest_framework import filters, status, viewsets
+from rest_framework import filters, viewsets
+from rest_framework.mixins import CreateModelMixin, ListModelMixin
 from rest_framework.pagination import LimitOffsetPagination
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.request import Request
-from rest_framework.response import Response
 
 from api.serializers import (
     CommentSerializer,
@@ -78,7 +77,7 @@ class PostViewSet(viewsets.ModelViewSet):
         serializer.save(author=self.request.user)
 
 
-class FollowViewSet(viewsets.ViewSet):
+class FollowViewSet(ListModelMixin, CreateModelMixin, viewsets.GenericViewSet):
     """Представление для модели Follow."""
 
     serializer_class = FollowSerializer
@@ -86,38 +85,18 @@ class FollowViewSet(viewsets.ViewSet):
     filter_backends = (filters.SearchFilter,)
     search_fields = ('following__username',)
 
-    def list(self, request: Request) -> Response:
+    def get_queryset(self) -> Any:
         """
-        Возвращает список подписок текущего пользователя.
-
-        Args:
-            request: Запрос
-
+        Получает список подписок текущего пользователя.
         Returns:
-            Response: Список подписок
+            QuerySet: Набор подписок пользователя
         """
-        queryset = request.user.follower.all()
-        if request.query_params.get('search'):
-            queryset = queryset.filter(
-                following__username__icontains=request.query_params['search']
-            )
-        serializer = self.serializer_class(queryset, many=True)
-        return Response(serializer.data)
+        return self.request.user.follower.all()
 
-    def create(self, request: Request) -> Response:
+    def perform_create(self, serializer: FollowSerializer) -> None:
         """
         Создает новую подписку.
-
         Args:
-            request: Запрос
-
-        Returns:
-            Response: Созданная подписка
+            serializer: Сериализатор подписки
         """
-        serializer = self.serializer_class(
-            data=request.data,
-            context={'request': request}
-        )
-        serializer.is_valid(raise_exception=True)
-        serializer.save(user=request.user)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        serializer.save(user=self.request.user)

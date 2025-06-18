@@ -61,9 +61,7 @@ class FollowSerializer(serializers.ModelSerializer):
         fields = ('user', 'following')
 
     def validate_following(self, value: Any) -> Any:
-        """Проверяет, что пользователь не подписывается сам на себя,
-        и что подписка не дублируется.
-        """
+        """Пользователь не подписывается на себя и подписка не дублируется."""
         user = self.context['request'].user
         following = value
 
