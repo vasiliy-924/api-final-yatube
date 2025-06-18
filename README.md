@@ -7,13 +7,14 @@
 
 ## Технологический стек
 - Python 3.7+
-- Django 3.2
-- Django REST Framework 3.12
-- Djoser (JWT аутентификация)
-- PostgreSQL
-- Gunicorn
-- Nginx
-- Docker
+- Django 5.1.1
+- Django REST Framework 3.15.2
+- Djoser 2.3.1 (JWT аутентификация)
+- djangorestframework-simplejwt 5.4.0
+- Pillow 11.0.0 (обработка изображений)
+- Pytest 8.3.3 (тестирование)
+- Flake8 7.1.1 (линтинг)
+- SQLite (база данных по умолчанию)
 
 ## Установка
 1. Клонируйте репозиторий:
